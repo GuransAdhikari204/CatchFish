@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CatchFish | SOC Overview</title>
+    <link rel="icon" type="image/png" href="/web-icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>(function(){if(localStorage.getItem('sjTheme')==='light')document.documentElement.classList.add('light-mode-early');})();</script>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html.light-mode-early body { background: #EEF2F8 !important; }
+
+        :root {
+            --bg: #080B0F;
+            --surface: #0C1018;
+            --surface2: #0F1520;
+            --border: #1B2535;
+            --border2: #253050;
+            --text: #C8D6E8;
+            --muted: #546880;
+            --muted2: #8299B5;
+            --accent: #2E7DD3;
+            --green: #0D9E74;
+            --red: #C93030;
+            --orange: #C97B20;
+            --mono: 'Consolas', 'SFMono-Regular', monospace;
+        }
+
+        body {
+            background: var(--bg);
+            font-family: 'Inter', system-ui, sans-serif;
+            color: var(--text);
+            line-height: 1.5;
+            font-size: 0.88rem;
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1B2535; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #253050; }
+
+        /* ── Layout ─────────────────────────────────────────────── */
+        .cis-wrapper { display: flex; min-height: 100vh; }
+
+        .cis-sidebar {
+            width: 210px; background: var(--surface); border-right: 1px solid var(--border);
+            padding: 16px 12px; position: sticky; top: 0; height: 100vh;
+            overflow-y: auto; flex-shrink: 0;
+        }
+
+        .logo-area {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+        }
+        .logo-icon {
+            background: linear-gradient(135deg, #1A4A96, #5B21B6);
+            width: 30px; height: 30px; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; flex-shrink: 0;
+        }
+        .logo-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .logo-text { font-size: 0.88rem; font-weight: 700; color: #B8CCE4; line-height: 1.2; }
+        .logo-sub { font-size: 0.59rem; color: var(--muted); font-weight: 400; display: block; margin-top: 1px; }
+
+        .nav-section { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); padding: 14px 8px 5px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 1px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 9px;
+            padding: 8px 10px; border-radius: 4px;
+            color: var(--muted2); font-size: 0.8rem; font-weight: 500;
+            text-decoration: none; cursor: pointer;
+            transition: background 0.1s, color 0.1s;
+            border-left: 2px solid transparent;
+        }
+        .nav-item i { width: 15px; font-size: 0.82rem; flex-shrink: 0; }
+        .nav-item.active { background: rgba(46,125,211,0.1); color: #60A5FA; border-left-color: var(--accent); }
+        .nav-item:hover:not(.active) { background: rgba(255,255,255,0.03); color: var(--text); }
+        .nav-badge { margin-left:auto; background:#C93030; color:#fff; font-size:0.55rem; font-weight:700; min-width:16px; height:16px; padding:0 4px; border-radius:8px; display:none; align-items:center; justify-content:center; line-height:1; }
+        .nav-badge.visible { display:flex; }
+
+        /* ── Main ───────────────────────────────────────────────── */
+        .cis-main { flex: 1; padding: 16px 20px; overflow-x: hidden; min-width: 0; }
+
+        /* ── Top bar ────────────────────────────────────────────── */
+        .top-navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 6px; padding: 9px 16px; margin-bottom: 14px;
+        }
+        .page-title {
+            font-size: 0.78rem; font-weight: 700; color: var(--muted2);
+            text-transform: uppercase; letter-spacing: 0.8px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .page-title i { color: var(--accent); }
+        .nav-tools { display: flex; align-items: center; gap: 8px; }
+
+        .server-status {
+            display: flex; align-items: center; gap: 7px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 4px; padding: 5px 11px;
+            font-size: 0.73rem; color: var(--muted2);
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+        .status-dot.active { background: var(--green); animation: pulse 1.4s infinite; }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(13,158,116,0.4); }
+            70% { box-shadow: 0 0 0 5px rgba(13,158,116,0); }
+        }
+
+        /* ── Theme toggle ───────────────────────────────────────── */
+        .theme-toggle {
+            display: inline-flex; align-items: center;
+            background: #050810; border: 1px solid #1B2535;
+            border-radius: 999px; padding: 3px; cursor: pointer;
+            position: relative; height: 28px; width: 64px;
+            transition: border-color 0.15s;
+        }
+        .theme-toggle:hover { border-color: var(--accent); }
+        .theme-toggle .tt-icon {
+            display: flex; align-items: center; justify-content: center;
+            width: 26px; height: 20px; border-radius: 999px;
+            font-size: 0.68rem; position: relative; z-index: 1; transition: color 0.2s;
+        }
+        .theme-toggle .tt-icon.tt-moon { color: #6A88A8; }
+        .theme-toggle .tt-icon.tt-sun  { color: #3A5070; }
+        .theme-toggle .tt-pill {
+            position: absolute; top: 3px; left: 3px;
+            width: 26px; height: 20px; border-radius: 999px;
+            background: #1A2535; transition: transform 0.2s cubic-bezier(.4,0,.2,1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        body.light-mode .theme-toggle { background: #E0EAF5; border-color: #B5C8DC; }
+        body.light-mode .theme-toggle .tt-pill { background: #FFF; transform: translateX(30px); }
+        body.light-mode .theme-toggle .tt-icon.tt-moon { color: #8A9DB8; }
+        body.light-mode .theme-toggle .tt-icon.tt-sun  { color: #D97706; }
+
+        /* ── Stats row ──────────────────────────────────────────── */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+        .stat-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 5px; padding: 12px 14px;
+            cursor: default; transition: border-color 0.1s;
+        }
+        .stat-card.filter-card { cursor: pointer; }
+        .stat-card.filter-card:hover { border-color: var(--border2); }
+        .stat-card.filter-card.active { border-color: var(--accent); background: rgba(46,125,211,0.04); }
+        .stat-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 7px; }
+        .stat-number { font-family: var(--mono); font-size: 1.7rem; font-weight: 600; color: var(--accent); line-height: 1; }
+        .stat-number.red    { color: var(--red);    }
+        .stat-number.green  { color: var(--green);  }
+        .stat-number.orange { color: var(--orange); }
+
+        /* ── Cards ──────────────────────────────────────────────── */
+        .cis-card { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+        .card-header {
+            padding: 9px 14px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 7px;
+            font-size: 0.64rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.9px; color: var(--muted2);
+        }
+        .card-header i { color: var(--accent); font-size: 0.7rem; }
+        .card-header-actions { margin-left: auto; }
+        .card-body { padding: 14px; }
+
+        /* ── Grid ───────────────────────────────────────────────── */
+        .main-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 12px; margin-bottom: 12px; }
+        .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; margin-bottom: 12px; }
+        .bottom-grid > .cis-card { grid-column: 1 / -1; }
+        @media (max-width: 1100px) {
+            .main-grid, .bottom-grid { grid-template-columns: 1fr; }
+            .cis-sidebar { width: 190px; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ── Threat feed ─────────────────────────────────────────── */
+        .threat-feed { max-height: 525px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+
+        .threat-item {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 4px; padding: 10px 12px; cursor: pointer;
+            transition: border-color 0.1s; border-left: 3px solid transparent;
+        }
+        .threat-item.feed-animate {
+            opacity: 0;
+            transform: translateY(8px);
+            animation: threatReveal 0.32s ease forwards;
+        }
+        @keyframes threatReveal {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .threat-item:hover { border-color: var(--border2); }
+        .threat-item.phish { border-left-color: var(--red); background: rgba(201,48,48,0.04); }
+        .threat-item.safe  { border-left-color: var(--green); }
+        .item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+        .item-subject { font-weight: 600; font-size: 0.82rem; word-break: break-word; color: var(--text); margin: 3px 0; }
+        .item-meta { font-size: 0.63rem; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .badge {
+            border-radius: 3px; padding: 2px 6px; font-size: 0.6rem; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .badge-phish { background: rgba(201,48,48,0.14); color: #F08080; border: 1px solid rgba(201,48,48,0.28); }
+        .badge-safe  { background: rgba(13,158,116,0.12); color: #5AE8B4; border: 1px solid rgba(13,158,116,0.24); }
+
+        .mail-details { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+        .mail-details.open { display: block; }
+        .detail-row { font-size: 0.72rem; color: #9AB2CC; margin-bottom: 4px; word-break: break-word; }
+        .detail-label { color: var(--muted); font-weight: 600; }
+        .detail-body {
+            margin-top: 7px; padding: 8px; background: #050810;
+            border: 1px solid var(--border); border-radius: 4px;
+            white-space: pre-wrap; word-break: break-word;
+            color: #9AB2CC; font-size: 0.73rem; max-height: 160px;
+            overflow-y: auto; line-height: 1.6; font-family: var(--mono);
+        }
+        .empty-placeholder {
+            text-align: center; padding: 40px 14px; color: var(--muted); font-size: 0.8rem;
+        }
+
+        /* ── Btn ─────────────────────────────────────────────────── */
+        .btn-primary {
+            background: #17406E; border: 1px solid #2E7DD3;
+            border-radius: 4px; width: 100%; padding: 9px 14px;
+            font-weight: 600; color: #93C5FD; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            transition: background 0.12s, border-color 0.12s; font-size: 0.82rem;
+        }
+        .btn-primary:hover { background: #1C4F8A; border-color: #4A9AE0; }
+        .btn-outline {
+            background: transparent; border: 1px solid var(--border2);
+            border-radius: 4px; padding: 5px 11px;
+            color: var(--muted2); cursor: pointer;
+            transition: background 0.12s, border-color 0.12s, color 0.12s;
+            font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+        }
+        .btn-outline:hover { background: rgba(255,255,255,0.03); border-color: var(--accent); color: #93C5FD; }
+
+        /* ── Charts ──────────────────────────────────────────────── */
+        .chart-block {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 4px; padding: 11px; margin-bottom: 10px;
+        }
+        .chart-title {
+            font-size: 0.57rem; text-transform: uppercase; letter-spacing: 0.8px;
+            color: var(--muted); margin-bottom: 9px;
+        }
+        .mini-chart {
+            display: grid; grid-auto-flow: column; gap: 6px;
+            align-items: end; min-height: 80px;
+        }
+        .chart-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .chart-bar {
+            width: 100%; min-width: 14px; border-radius: 3px 3px 2px 2px;
+            background: linear-gradient(180deg, #2E7DD3 0%, #1A4A96 100%);
+            height: 0; transition: height 0.55s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+        .chart-bar.alt { background: linear-gradient(180deg, #0D9E74 0%, #0A6A50 100%); }
+        .chart-label { font-size: 0.58rem; color: var(--muted); text-align: center; }
+        .chart-value { font-size: 0.62rem; color: var(--muted2); font-family: var(--mono); font-weight: 600; transition: opacity 0.3s; }
+
+        .pie-wrap { display: flex; align-items: center; gap: 16px; min-height: 100px; }
+        .pie-chart {
+            width: 96px; height: 96px; border-radius: 50%;
+            background: conic-gradient(#0D9E74 0deg, #0D9E74 360deg, #C93030 360deg);
+            border: 1px solid var(--border2); flex-shrink: 0;
+            transition: background 0.7s ease;
+        }
+        .pie-legend { display: grid; gap: 7px; width: 100%; }
+        .legend-row {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; font-size: 0.76rem; color: var(--muted2);
+        }
+        .legend-key { display: inline-flex; align-items: center; gap: 7px; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .legend-dot.safe  { background: var(--green); }
+        .legend-dot.phish { background: var(--red); }
+        .legend-count { font-family: var(--mono); font-weight: 700; color: var(--text); transition: color 0.3s; }
+
+        /* ── Analytics extra stats ───────────────────────────────── */
+        .analytics-stats-row {
+            display: flex; gap: 10px; margin-top: 2px;
+        }
+        .analytics-stat {
+            flex: 1; background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 4px; padding: 8px 10px; text-align: center;
+        }
+        .analytics-stat-label { font-size: 0.54rem; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 4px; }
+        .analytics-stat-value { font-size: 0.95rem; font-weight: 700; font-family: var(--mono); color: var(--text); }
+        .analytics-stat-value.red    { color: var(--red); }
+        .analytics-stat-value.accent { color: var(--accent); font-size: 0.72rem; word-break: break-all; }
+
+        /* ── Capabilities marquee ─────────────────────────────────── */
+        .cap-marquee-wrap { overflow: hidden; width: 100%; }
+        @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .cap-marquee-track {
+            display: flex; width: max-content;
+            animation: marquee 28s linear infinite;
+        }
+        .cap-marquee-track:hover { animation-play-state: paused; }
+
+        /* ── Pipeline ────────────────────────────────────────────── */
+        .pipe-row {
+            display: flex; align-items: center; gap: 0;
+            flex-wrap: nowrap; padding: 6px 0; justify-content: center;
+            overflow-x: auto;
+        }
+        .pipe-step {
+            text-align: center; padding: 9px 12px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 5px; flex-shrink: 0;
+        }
+        .pipe-step-icon  { font-size: 1rem; margin-bottom: 4px; }
+        .pipe-step-label { font-size: 0.6rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.3px; }
+        .pipe-step-sub   { font-size: 0.53rem; color: var(--muted); margin-top: 2px; }
+        .pipe-arrow { flex-shrink: 0; padding: 0 4px; color: #253050; font-size: 0.8rem; }
+
+        /* ── Capabilities ────────────────────────────────────────── */
+        .cap-grid { display: flex; flex-wrap: nowrap; gap: 0; overflow-x: auto; }
+        .cap-list { list-style: none; padding: 0; display: flex; flex-wrap: nowrap; gap: 0; margin: 0; }
+        .cap-list li {
+            padding: 6px 14px; border-right: 1px solid var(--border);
+            font-size: 0.78rem; color: var(--muted2);
+            display: flex; gap: 6px; align-items: center; white-space: nowrap; flex-shrink: 0;
+        }
+        .cap-list li:last-child { border-right: none; }
+        .cap-icon { color: var(--green); flex-shrink: 0; margin-top: 2px; font-size: 0.72rem; }
+
+        /* ── Light mode ──────────────────────────────────────────── */
+        body.light-mode { background: #EEF2F8; color: #1A2535; }
+        body.light-mode .cis-sidebar,
+        body.light-mode .top-navbar { background: #FFFFFF; border-color: #CCDAE8; }
+        body.light-mode .stat-card,
+        body.light-mode .cis-card { background: #FFFFFF; border-color: #CCDAE8; }
+        body.light-mode .stat-card.filter-card.active { background: #EAF2FF; border-color: #2563EB; }
+        body.light-mode .threat-item { background: #FAFCFF; border-color: #CCDAE8; }
+        body.light-mode .threat-item.phish { background: #FFF5F5; }
+        body.light-mode .threat-item.safe  { background: #F0FDF8; }
+        body.light-mode .nav-item { color: #4A607A; }
+        body.light-mode .nav-item.active { background: #EAF2FF; color: #1D4ED8; border-left-color: #2563EB; }
+        body.light-mode .nav-item:hover:not(.active) { background: #F2F7FF; color: #1E293B; }
+        body.light-mode .server-status { background: #F2F6FC; border-color: #C4D4E8; }
+        body.light-mode .logo-text { color: #0F172A; }
+        body.light-mode .stat-number { color: #1D4ED8; }
+        body.light-mode .stat-number.red    { color: #B91C1C; }
+        body.light-mode .stat-number.green  { color: #047857; }
+        body.light-mode .stat-number.orange { color: #B45309; }
+        body.light-mode .chart-block { background: #F4F7FC; border-color: #CCDAE8; }
+        body.light-mode .detail-body { background: #F4F7FC; border-color: #CCDAE8; color: #1E293B; }
+        body.light-mode .detail-row { color: #1E293B; }
+        body.light-mode .badge-safe  { background: rgba(13,158,116,0.12); color: #047857; }
+        body.light-mode .badge-phish { background: rgba(201,48,48,0.12); color: #B91C1C; }
+        body.light-mode .pipe-step { background: #F4F7FC; border-color: #CCDAE8; }
+        body.light-mode .pipe-step-label { color: #1E293B; }
+        body.light-mode .pipe-step-sub   { color: #546880; }
+        body.light-mode .cap-list li { border-bottom-color: #E2EBF5; color: #334155; }
+        body.light-mode .legend-row { color: #334155; }
+
+        footer {
+            margin-top: 24px; text-align: center; font-size: 0.62rem;
+            color: var(--muted); border-top: 1px solid var(--border);
+            padding-top: 12px; letter-spacing: 0.5px;
+        }
+        body.light-mode footer { border-top-color: #CCDAE8; }
+        body.light-mode .analytics-stat { background: #F4F7FC; border-color: #CCDAE8; }
+        body.light-mode .analytics-stat-label { color: #6A88A8; }
+        body.light-mode .analytics-stat-value { color: #1A2535; }
+    </style>
+</head>
+<body>
+<div class="cis-wrapper">
+
+    <!-- ── Sidebar ── -->
+    <div class="cis-sidebar">
+        <div class="logo-area">
+            <div class="logo-icon"><img src="/web-icon.png" alt="CatchFish"></div>
+            <div class="logo-text">CatchFish<span class="logo-sub">Phishing Detection</span></div>
+        </div>
+        <div class="nav-section">Overview</div>
+        <div class="nav-menu">
+            <a href="/" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span>Overview</span></a>
+            <a href="/alerts" class="nav-item" id="navAlerts"><i class="fas fa-bell"></i><span>Alerts &amp; Notifications</span><span class="nav-badge" id="navAlertBadge"></span></a>
+        </div>
+        <div class="nav-section">ML Pipeline</div>
+        <div class="nav-menu">
+            <a href="/dataset" class="nav-item"><i class="fas fa-database"></i><span>Dataset</span></a>
+            <a href="/feature-extraction" class="nav-item"><i class="fas fa-microscope"></i><span>Feature Extraction</span></a>
+            <a href="/post-ml" class="nav-item"><i class="fas fa-code-branch"></i><span>Post ML</span></a>
+            <a href="/model" class="nav-item"><i class="fas fa-brain"></i><span>Model</span></a>
+        </div>
+        <div class="nav-section">Security Intelligence</div>
+        <div class="nav-menu">
+            <a href="/virustotal-file-scanner" class="nav-item"><i class="fas fa-virus-slash"></i><span>VirusTotal Scanner</span></a>
+            <a href="/domain-intelligence" class="nav-item"><i class="fas fa-globe"></i><span>Domain Intelligence</span></a>
+        </div>
+        <div class="nav-section">Console</div>
+        <div class="nav-menu">
+            <a href="/mail-dashboard" class="nav-item"><i class="fas fa-envelope-open-text"></i><span>Mail Dashboard</span></a>
+        </div>
+    </div>
+
+    <!-- ── Main ── -->
+    <div class="cis-main">
+
+        <!-- Top bar -->
+        <div class="top-navbar">
+            <div class="page-title"><i class="fas fa-chart-line"></i> Security Operations Center</div>
+            <div class="nav-tools">
+                <div class="server-status">
+                    <span class="status-dot" id="serverDotIndex"></span>
+                    <span id="serverTextIndex">Local SMTP</span>
+                </div>
+                <button class="theme-toggle" id="themeToggleIndex" type="button" title="Toggle day / night mode">
+                    <span class="tt-pill"></span>
+                    <span class="tt-icon tt-moon"><i class="fas fa-moon"></i></span>
+                    <span class="tt-icon tt-sun"><i class="fas fa-sun"></i></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card filter-card active" data-filter="all">
+                <div class="stat-label">Total Scanned</div>
+                <div class="stat-number" id="globalEmails">0</div>
+            </div>
+            <div class="stat-card filter-card" data-filter="phishing">
+                <div class="stat-label">Phishing Detected</div>
+                <div class="stat-number red" id="globalThreats">0</div>
+            </div>
+            <div class="stat-card filter-card" data-filter="safe">
+                <div class="stat-label">Safe Emails</div>
+                <div class="stat-number green" id="globalSafe">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ML Confidence Avg</div>
+                <div class="stat-number orange" id="globalAvgConf">—</div>
+            </div>
+        </div>
+
+        <!-- Main grid: Feed | Analytics -->
+        <div class="main-grid">
+
+            <!-- Live Threat Feed -->
+            <div class="cis-card">
+                <div class="card-header">
+                    <i class="fas fa-bell"></i> Live Threat Feed
+                    <div class="card-header-actions">
+                        <button class="btn-outline" id="refreshOverviewBtn" style="padding:3px 10px;font-size:0.68rem">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="liveThreatList" class="threat-feed">
+                        <div class="empty-placeholder">Click Refresh to load data</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics -->
+            <div class="cis-card">
+                <div class="card-header"><i class="fas fa-chart-pie"></i> Mail Analytics</div>
+                <div class="card-body">
+                    <div class="chart-block">
+                        <div class="chart-title">Emails Received — Last 7 Days</div>
+                        <div id="chartDaily" class="mini-chart"></div>
+                    </div>
+                    <div class="chart-block">
+                        <div class="chart-title">Safe vs Phishing Distribution</div>
+                        <div class="pie-wrap">
+                            <div id="chartPie" class="pie-chart"></div>
+                            <div class="pie-legend">
+                                <div class="legend-row">
+                                    <span class="legend-key"><span class="legend-dot safe"></span> Safe</span>
+                                    <span class="legend-count" id="pieSafeCount">0</span>
+                                </div>
+                                <div class="legend-row">
+                                    <span class="legend-key"><span class="legend-dot phish"></span> Phishing</span>
+                                    <span class="legend-count" id="piePhishCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-block">
+                        <div class="chart-title">Phishing Rate — Last 7 Days</div>
+                        <div id="chartPhishRate" class="mini-chart"></div>
+                    </div>
+                    <div class="analytics-stats-row">
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-label">Phishing Rate</div>
+                            <div class="analytics-stat-value red" id="statPhishRate">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom grid: Pipeline -->
+        <div class="bottom-grid">
+
+            <!-- Detection Pipeline -->
+            <div class="cis-card">
+                <div class="card-header"><i class="fas fa-diagram-project"></i> Detection Pipeline</div>
+                <div class="card-body">
+                    <div class="pipe-row">
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#60A5FA"><i class="fas fa-envelope-open"></i></div>
+                            <div class="pipe-step-label">Email In</div>
+                            <div class="pipe-step-sub">SMTP · IMAP · Manual</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#A78BFA"><i class="fas fa-broom"></i></div>
+                            <div class="pipe-step-label">Preprocess</div>
+                            <div class="pipe-step-sub">HTML strip</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#34D399"><i class="fas fa-microscope"></i></div>
+                            <div class="pipe-step-label">Feature Extract</div>
+                            <div class="pipe-step-sub">URLs · Domain</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#FBBF24"><i class="fas fa-brain"></i></div>
+                            <div class="pipe-step-label">ML Model</div>
+                            <div class="pipe-step-sub" id="pipeModelName">Best Classifier</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#F87171"><i class="fas fa-code-branch"></i></div>
+                            <div class="pipe-step-label">Rule Engine</div>
+                            <div class="pipe-step-sub">Domain · IP · TLD</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#E879F9"><i class="fas fa-scale-balanced"></i></div>
+                            <div class="pipe-step-label">Threshold</div>
+                            <div class="pipe-step-sub">0.60 Anti-FP</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#38BDF8"><i class="fas fa-database"></i></div>
+                            <div class="pipe-step-label">Log &amp; Store</div>
+                            <div class="pipe-step-sub">PostgreSQL</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#10B981"><i class="fas fa-bell"></i></div>
+                            <div class="pipe-step-label">Alert Feed</div>
+                            <div class="pipe-step-sub">Real-time</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <footer><i class="fas fa-diagram-project"></i> Detection Pipeline &mdash; CatchFish Real-time ML Phishing Detection System</footer>
+    </div>
+</div>
+
+<script>
+    async function fetchJSON(url, options = {}) {
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"]/g, m =>
+            m === '&' ? '&amp;' : m === '<' ? '&lt;' : m === '>' ? '&gt;' : '&quot;'
+        );
+    }
+
+    function normalizeEmailBody(raw) {
+        if (!raw) return '(No body)';
+        const value = String(raw);
+        const looksHtml = /<[a-z][\s\S]*>/i.test(value);
+        if (!looksHtml) return value;
+
+        const doc = new DOMParser().parseFromString(value, 'text/html');
+        doc.querySelectorAll('script,style,noscript').forEach(el => el.remove());
+        const text = ((doc.body && doc.body.innerText) || doc.documentElement.textContent || '')
+            .replace(/\n{3,}/g, '\n\n').trim();
+        return text || value;
+    }
+
+    let allEmailCache = [];
+    const CACHE_LIMIT = 5000;
+    let activeThreatFilter = 'all';
+    let syncInProgress = false;
+    let expandedThreatItemId = null;
+
+    function getStableThreatId(item) {
+        const raw = item.source_uid || item.id || `${item.received_at || ''}|${item.sender || ''}|${item.subject || ''}`;
+        return `idx-threat-${String(raw).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+    }
+
+    function getEmailKey(item) {
+        return String(item.source_uid || item.id || `${item.received_at || ''}|${item.sender || ''}|${item.subject || ''}`);
+    }
+
+    function normalizeEmails(items) {
+        const map = new Map();
+        (Array.isArray(items) ? items : []).forEach(item => {
+            map.set(getEmailKey(item), item);
+        });
+        return Array.from(map.values()).slice(0, CACHE_LIMIT);
+    }
+
+    function updateStats(allItems) {
+        const phishCount = allItems.filter(i => i.prediction === 'phishing').length;
+        const safeCount  = allItems.filter(i => i.prediction !== 'phishing').length;
+        const totalEmails = allItems.length;
+        const avgConfidence = allItems.length
+            ? Math.round((allItems.reduce((sum, i) => sum + Number(i.confidence || 0), 0) / allItems.length) * 100)
+            : 0;
+
+        const elThreats = document.getElementById('globalThreats');
+        const elSafe    = document.getElementById('globalSafe');
+        const elEmails  = document.getElementById('globalEmails');
+        const elConf    = document.getElementById('globalAvgConf');
+        if (elThreats) animateCounter(elThreats, phishCount);
+        if (elSafe)    animateCounter(elSafe, safeCount);
+        if (elEmails)  animateCounter(elEmails, totalEmails);
+        if (elConf)    elConf.textContent = totalEmails ? `${avgConfidence}%` : '—';
+    }
+
+    function getThreatItemsByFilter(allItems) {
+        if (activeThreatFilter === 'phishing') return allItems.filter(i => i.prediction === 'phishing');
+        if (activeThreatFilter === 'safe')     return allItems.filter(i => i.prediction !== 'phishing');
+        return allItems;
+    }
+
+    function applyThreatFilter(filter) {
+        activeThreatFilter = filter;
+        document.querySelectorAll('.stat-card.filter-card').forEach(card => {
+            card.classList.toggle('active', card.dataset.filter === filter);
+        });
+        renderThreatFeed(allEmailCache);
+    }
+
+    function renderThreatFeed(allItems) {
+        const liveContainer = document.getElementById('liveThreatList');
+        if (!liveContainer) return;
+
+        const filteredItems = getThreatItemsByFilter(allItems);
+
+        if (!filteredItems.length) {
+            expandedThreatItemId = null;
+            liveContainer.innerHTML = '<div class="empty-placeholder">No emails in selected category</div>';
+            return;
+        }
+
+        liveContainer.innerHTML = filteredItems.map((a, idx) => {
+            const isPhish = a.prediction === 'phishing';
+            const prob = (Number(a.probability || 0) * 100).toFixed(1);
+            const itemId = getStableThreatId(a);
+            const dt = a.received_at ? new Date(a.received_at).toLocaleString() : '—';
+            const delayMs = Math.min(idx * 40, 320);
+
+            return `<div class="threat-item feed-animate ${isPhish ? 'phish' : 'safe'}" data-item-id="${itemId}" style="animation-delay:${delayMs}ms">
+                <div class="item-top">
+                    <span class="badge ${isPhish ? 'badge-phish' : 'badge-safe'}">${isPhish ? '⚠ Phishing' : '✓ Safe'}</span>
+                    <span style="font-size:0.63rem;color:var(--muted);font-family:var(--mono)">${prob}%</span>
+                </div>
+                <div class="item-subject">${escapeHtml(a.subject || '(No subject)')}</div>
+                <div class="item-meta">
+                    <span>${escapeHtml(a.sender || '')}</span>
+                    <span>${dt}</span>
+                </div>
+                <div class="mail-details" id="${itemId}">
+                    <div class="detail-row"><span class="detail-label">From:</span> ${escapeHtml(a.sender || '')}</div>
+                    <div class="detail-row"><span class="detail-label">To:</span> ${escapeHtml(a.recipient || '')}</div>
+                    <div class="detail-row"><span class="detail-label">Verdict:</span> ${isPhish ? 'Phishing' : 'Legitimate'} — Score: ${prob}%</div>
+                    <div class="detail-body">${escapeHtml(normalizeEmailBody(a.body || ''))}</div>
+                </div>
+            </div>`;
+        }).join('');
+
+        liveContainer.querySelectorAll('.threat-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const details = item.querySelector('.mail-details');
+                if (!details) return;
+                const shouldOpen = !details.classList.contains('open');
+                liveContainer.querySelectorAll('.mail-details.open').forEach(el => el.classList.remove('open'));
+                if (shouldOpen) {
+                    details.classList.add('open');
+                    expandedThreatItemId = details.id;
+                } else {
+                    expandedThreatItemId = null;
+                }
+            });
+            const details = item.querySelector('.mail-details');
+            if (details) details.addEventListener('click', e => e.stopPropagation());
+        });
+
+        if (expandedThreatItemId) {
+            const expandedEl = liveContainer.querySelector(`#${CSS.escape(expandedThreatItemId)}`);
+            if (expandedEl) expandedEl.classList.add('open');
+            else expandedThreatItemId = null;
+        }
+    }
+
+    const CACHE_VERSION = '3';
+
+    function cacheEmailData(items) {
+        try {
+            localStorage.setItem('CatchFishCacheVersion', CACHE_VERSION);
+            localStorage.setItem('CatchFishEmailCache', JSON.stringify(items.slice(0, CACHE_LIMIT)));
+            localStorage.setItem('CatchFishCacheTime', String(Date.now()));
+        } catch(e) { console.warn('Cache storage error:', e); }
+    }
+
+    function loadCachedEmails() {
+        try {
+            const storedVersion = localStorage.getItem('CatchFishCacheVersion');
+            if (storedVersion !== CACHE_VERSION) {
+                localStorage.removeItem('CatchFishEmailCache');
+                localStorage.setItem('CatchFishCacheVersion', CACHE_VERSION);
+                return [];
+            }
+            const cached = localStorage.getItem('CatchFishEmailCache');
+            return cached ? normalizeEmails(JSON.parse(cached)) : [];
+        } catch(e) {
+            console.warn('Cache load error:', e);
+            return [];
+        }
+    }
+
+    async function loadOverview() {
+        try {
+            // Load from cache immediately
+            allEmailCache = loadCachedEmails();
+            updateStats(allEmailCache);
+            renderThreatFeed(allEmailCache);
+
+            // Fetch fresh data
+            try {
+                const activity = await fetchJSON('/api/activity?limit=5000');
+                const items = Array.isArray(activity.items) ? activity.items : [];
+                allEmailCache = normalizeEmails(items);
+
+                cacheEmailData(allEmailCache);
+                updateStats(allEmailCache);
+                renderThreatFeed(allEmailCache);
+                renderAnalytics(allEmailCache);
+            } catch(e) {
+                console.warn('Activity fetch error:', e);
+            }
+        } catch(e) {
+            console.warn('Overview load error:', e);
+        }
+    }
+
+    function syncInboxInBackground() {
+        if (syncInProgress) return;
+        syncInProgress = true;
+        fetchJSON('/api/sync-inbox?limit=100', { method: 'POST' })
+            .catch(() => {})
+            .finally(() => { syncInProgress = false; });
+    }
+
+    function animateCounter(el, target, duration = 600) {
+        const start = parseInt(el.textContent) || 0;
+        if (start === target) return;
+        const startTime = performance.now();
+        function step(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(start + (target - start) * ease);
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    function renderBarChart(containerId, rows, colorAlt) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        if (!rows.length) {
+            container.innerHTML = '<div class="empty-placeholder" style="padding:12px;">No data</div>';
+            return;
+        }
+        const max = Math.max(...rows.map(r => r.value), 1);
+        container.innerHTML = rows.map((row, idx) => {
+            const alt = (colorAlt || idx % 2 === 1) ? ' alt' : '';
+            return `<div class="chart-col">
+                <div class="chart-value" style="opacity:0">${row.value}</div>
+                <div class="chart-bar${alt}" style="height:0px" data-target="${Math.max(6, Math.round((row.value / max) * 62))}"></div>
+                <div class="chart-label">${escapeHtml(row.label)}</div>
+            </div>`;
+        }).join('');
+        // Animate bars after paint
+        requestAnimationFrame(() => {
+            container.querySelectorAll('.chart-bar').forEach((bar, i) => {
+                const target = bar.dataset.target;
+                setTimeout(() => {
+                    bar.style.height = target + 'px';
+                }, i * 40);
+            });
+            container.querySelectorAll('.chart-value').forEach((val, i) => {
+                setTimeout(() => {
+                    val.style.opacity = '1';
+                }, i * 40 + 300);
+            });
+        });
+    }
+
+    function renderAnalytics(items) {
+        const today = new Date();
+        const dayRows = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - i);
+            const key   = d.toISOString().slice(0, 10);
+            const label = d.toLocaleDateString([], { weekday: 'short' });
+            const count = items.filter(it => String(it.received_at || '').slice(0, 10) === key).length;
+            dayRows.push({ label, value: count });
+        }
+
+        const safeCount  = items.filter(it => it.prediction !== 'phishing').length;
+        const phishCount = items.filter(it => it.prediction === 'phishing').length;
+        renderPieChart(safeCount, phishCount);
+        renderBarChart('chartDaily', dayRows);
+
+        // Phishing rate per day bar chart
+        const phishRateRows = dayRows.map((row, i) => {
+            const key = new Date(today);
+            key.setDate(today.getDate() - (6 - i));
+            const keyStr = key.toISOString().slice(0, 10);
+            const dayItems = items.filter(it => String(it.received_at || '').slice(0, 10) === keyStr);
+            const rate = dayItems.length ? Math.round((dayItems.filter(it => it.prediction === 'phishing').length / dayItems.length) * 100) : 0;
+            return { label: row.label, value: rate };
+        });
+        renderBarChart('chartPhishRate', phishRateRows, true);
+
+        // Inline stats
+        const total = safeCount + phishCount;
+        const phishRate = total ? Math.round((phishCount / total) * 100) : 0;
+        const rateEl = document.getElementById('statPhishRate');
+        if (rateEl) {
+            const prev = parseInt(rateEl.textContent) || 0;
+            const start = performance.now();
+            const dur = 600;
+            (function tick(now) {
+                const p = Math.min((now - start) / dur, 1);
+                const e = 1 - Math.pow(1 - p, 3);
+                rateEl.textContent = Math.round(prev + (phishRate - prev) * e) + '%';
+                if (p < 1) requestAnimationFrame(tick);
+            })(start);
+        }
+    }
+
+    function renderPieChart(safeCount, phishCount) {
+        const pie        = document.getElementById('chartPie');
+        const safeLabel  = document.getElementById('pieSafeCount');
+        const phishLabel = document.getElementById('piePhishCount');
+        if (!pie) return;
+
+        const total   = safeCount + phishCount;
+        // Animate from 0 to final angle
+        let currentDeg = parseFloat(pie.dataset.currentDeg || '360');
+        const targetDeg = total ? Math.round((safeCount / total) * 360) : 360;
+        pie.dataset.currentDeg = targetDeg;
+
+        const duration = 700;
+        const startTime = performance.now();
+        function animatePie(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            const deg = Math.round(currentDeg + (targetDeg - currentDeg) * ease);
+            pie.style.background = `conic-gradient(#0D9E74 0deg, #0D9E74 ${deg}deg, #C93030 ${deg}deg, #C93030 360deg)`;
+            if (progress < 1) requestAnimationFrame(animatePie);
+        }
+        requestAnimationFrame(animatePie);
+
+        if (safeLabel)  animateCounter(safeLabel,  safeCount);
+        if (phishLabel) animateCounter(phishLabel, phishCount);
+    }
+
+    function applyTheme(theme) {
+        document.body.classList.toggle('light-mode', theme === 'light');
+    }
+
+    function initThemeToggle(buttonId) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const nextTheme = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+            localStorage.setItem('sjTheme', nextTheme);
+            applyTheme(nextTheme);
+        });
+    }
+
+    window.addEventListener('storage', (event) => {
+        if (event.key === 'sjTheme') {
+            applyTheme(event.newValue || 'dark');
+        }
+    });
+
+    async function updateServerStatus() {
+        try {
+            const data = await fetchJSON('/api/local-server-status');
+            const isUp = !!data.local_server_up;
+            const dot  = document.getElementById('serverDotIndex');
+            const text = document.getElementById('serverTextIndex');
+            if (dot)  dot.classList.toggle('active', isUp);
+            if (text) text.textContent = isUp ? 'Local SMTP Up' : 'SMTP Offline';
+        } catch(error) {
+            const dot = document.getElementById('serverDotIndex');
+            if (dot) dot.classList.remove('active');
+        }
+    }
+
+    async function pushRecordsToDatabase() {
+        if (allEmailCache.length > 0) {
+            try {
+                await fetchJSON('/api/persist-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ records: allEmailCache })
+                });
+            } catch(e) { console.warn('Database persist error:', e); }
+        }
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────────
+
+    const savedTheme = localStorage.getItem('sjTheme') || 'dark';
+    applyTheme(savedTheme);
+    initThemeToggle('themeToggleIndex');
+
+    // Load model info into pipeline
+    fetchJSON('/api/model-info').then(info => {
+        const el = document.getElementById('pipeModelName');
+        if (el && info.model_name) el.textContent = info.model_name;
+    }).catch(() => {});
+
+    // Filter cards click
+    document.querySelectorAll('.stat-card.filter-card').forEach(card => {
+        card.addEventListener('click', () => applyThreatFilter(card.dataset.filter || 'all'));
+    });
+
+    // Refresh button — manual trigger only
+    document.getElementById('refreshOverviewBtn')?.addEventListener('click', loadOverview);
+
+    // Close expanded item when clicking outside feed
+    document.addEventListener('click', event => {
+        const container = document.getElementById('liveThreatList');
+        if (!container || container.contains(event.target)) return;
+        container.querySelectorAll('.mail-details.open').forEach(el => el.classList.remove('open'));
+        expandedThreatItemId = null;
+    });
+
+    applyThreatFilter('all');
+    loadOverview();
+    syncInboxInBackground();
+    updateServerStatus();
+    setInterval(syncInboxInBackground, 180000);
+    setInterval(updateServerStatus, 4000);
+    setInterval(pushRecordsToDatabase, 30000);
+</script>
+<script>
+(function(){
+    var b=document.getElementById('navAlertBadge');if(!b)return;
+    function getRead(){try{return new Set(JSON.parse(localStorage.getItem('sjAlertsRead')||'[]'));}catch{return new Set();}}
+    fetch('/api/alerts?limit=500').then(r=>r.json()).then(d=>{
+        var items=Array.isArray(d)?d:(d.items||[]);
+        var n=items.filter(a=>!getRead().has(String(a.id))).length;
+        if(n>0){b.textContent=n>99?'99+':n;b.classList.add('visible');}
+    }).catch(()=>{});
+})();
+</script>
+</body>
+</html>

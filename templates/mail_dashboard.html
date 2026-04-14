@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CatchFish | Mail Threat Console</title>
+    <link rel="icon" type="image/png" href="/web-icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>(function(){if(localStorage.getItem('sjTheme')==='light')document.documentElement.classList.add('light-mode-early');})();</script>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html.light-mode-early body { background: #EEF2F8 !important; }
+
+        :root {
+            --bg: #080B0F;
+            --surface: #0C1018;
+            --surface2: #0F1520;
+            --border: #1B2535;
+            --border2: #253050;
+            --text: #C8D6E8;
+            --muted: #546880;
+            --muted2: #8299B5;
+            --accent: #2E7DD3;
+            --green: #0D9E74;
+            --red: #C93030;
+            --orange: #C97B20;
+            --input-bg: #050810;
+            --mono: 'Consolas', 'SFMono-Regular', monospace;
+            --console-card-height: 560px;
+        }
+
+        body {
+            background: var(--bg);
+            font-family: 'Inter', system-ui, sans-serif;
+            color: var(--text);
+            line-height: 1.5;
+            font-size: 0.88rem;
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1B2535; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #253050; }
+
+        /* ── Layout ─────────────────────────────────────────────── */
+        .cis-wrapper { display: flex; min-height: 100vh; }
+
+        .cis-sidebar {
+            width: 210px; background: var(--surface); border-right: 1px solid var(--border);
+            padding: 16px 12px; position: sticky; top: 0; height: 100vh;
+            overflow-y: auto; flex-shrink: 0;
+        }
+
+        .logo-area {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+        }
+        .logo-icon {
+            background: linear-gradient(135deg, #1A4A96, #5B21B6);
+            width: 30px; height: 30px; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; flex-shrink: 0;
+        }
+        .logo-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .logo-text { font-size: 0.88rem; font-weight: 700; color: #B8CCE4; line-height: 1.2; }
+        .logo-sub { font-size: 0.59rem; color: var(--muted); font-weight: 400; display: block; margin-top: 1px; }
+
+        .nav-section { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); padding: 14px 8px 5px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 1px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 9px;
+            padding: 8px 10px; border-radius: 4px;
+            color: var(--muted2); font-size: 0.8rem; font-weight: 500;
+            text-decoration: none; cursor: pointer;
+            transition: background 0.1s, color 0.1s;
+            border-left: 2px solid transparent;
+        }
+        .nav-item i { width: 15px; font-size: 0.82rem; flex-shrink: 0; }
+        .nav-item.active { background: rgba(46,125,211,0.1); color: #60A5FA; border-left-color: var(--accent); }
+        .nav-item:hover:not(.active) { background: rgba(255,255,255,0.03); color: var(--text); }
+        .nav-badge { margin-left:auto; background:#C93030; color:#fff; font-size:0.55rem; font-weight:700; min-width:16px; height:16px; padding:0 4px; border-radius:8px; display:none; align-items:center; justify-content:center; line-height:1; }
+        .nav-badge.visible { display:flex; }
+
+        .sidebar-section { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); padding: 14px 8px 5px; }
+
+        #userList {
+            max-height: 180px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        .user-chip {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; border-radius: 4px;
+            font-size: 0.74rem; color: var(--muted); cursor: pointer;
+            transition: background 0.1s, color 0.1s;
+        }
+        .user-chip:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+        .user-chip.active { background: rgba(46,125,211,0.08); color: #93C5FD; }
+        .user-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+        .add-user-btn {
+            display: flex; align-items: center; gap: 7px;
+            padding: 6px 10px; border-radius: 4px;
+            font-size: 0.73rem; color: var(--accent); cursor: pointer;
+            border: 1px dashed #1B3A6A; background: transparent; width: 100%;
+            margin-top: 5px; transition: background 0.1s;
+        }
+        .add-user-btn:hover { background: rgba(46,125,211,0.07); }
+
+        /* ── Main ───────────────────────────────────────────────── */
+        .cis-main { flex: 1; padding: 16px 20px; overflow-x: hidden; min-width: 0; }
+
+        /* ── Top bar ────────────────────────────────────────────── */
+        .top-navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 6px; padding: 9px 16px; margin-bottom: 14px;
+        }
+        .page-title {
+            font-size: 0.78rem; font-weight: 700; color: var(--muted2);
+            text-transform: uppercase; letter-spacing: 0.8px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .page-title i { color: var(--accent); }
+        .nav-tools { display: flex; align-items: center; gap: 8px; }
+
+        .server-status {
+            display: flex; align-items: center; gap: 7px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 4px; padding: 5px 11px;
+            font-size: 0.73rem; color: var(--muted2);
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+
+        /* ── Theme toggle ───────────────────────────────────────── */
+        .theme-toggle {
+            display: inline-flex; align-items: center;
+            background: #050810; border: 1px solid #1B2535;
+            border-radius: 999px; padding: 3px; cursor: pointer;
+            position: relative; height: 28px; width: 64px;
+            transition: border-color 0.15s;
+        }
+        .theme-toggle:hover { border-color: var(--accent); }
+        .theme-toggle .tt-icon {
+            display: flex; align-items: center; justify-content: center;
+            width: 26px; height: 20px; border-radius: 999px;
+            font-size: 0.68rem; position: relative; z-index: 1; transition: color 0.2s;
+        }
+        .theme-toggle .tt-icon.tt-moon { color: #6A88A8; }
+        .theme-toggle .tt-icon.tt-sun  { color: #3A5070; }
+        .theme-toggle .tt-pill {
+            position: absolute; top: 3px; left: 3px;
+            width: 26px; height: 20px; border-radius: 999px;
+            background: #1A2535; transition: transform 0.2s cubic-bezier(.4,0,.2,1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        body.light-mode .theme-toggle { background: #E0EAF5; border-color: #B5C8DC; }
+        body.light-mode .theme-toggle .tt-pill { background: #FFF; transform: translateX(30px); }
+        body.light-mode .theme-toggle .tt-icon.tt-moon { color: #8A9DB8; }
+        body.light-mode .theme-toggle .tt-icon.tt-sun  { color: #D97706; }
+
+        /* ── Stats row ──────────────────────────────────────────── */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+        .stat-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 5px; padding: 12px 14px;
+        }
+        .stat-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 7px; }
+        .stat-value { font-family: var(--mono); font-size: 1.7rem; font-weight: 600; color: var(--accent); line-height: 1; }
+        .stat-value.red   { color: var(--red);    }
+        .stat-value.green { color: var(--green);  }
+        .stat-value.orange{ color: var(--orange); }
+
+        /* ── Cards ──────────────────────────────────────────────── */
+        .cis-card { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+        .card-header {
+            padding: 9px 14px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 7px;
+            font-size: 0.64rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.9px; color: var(--muted2);
+        }
+        .card-header i { color: var(--accent); font-size: 0.7rem; }
+        .card-header-actions { margin-left: auto; display: flex; gap: 5px; }
+        .card-body { padding: 14px; }
+
+        /* ── Grid ───────────────────────────────────────────────── */
+        .cis-grid   { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; margin-bottom: 12px; align-items: stretch; }
+        .cis-grid > .cis-card { height: var(--console-card-height); min-height: var(--console-card-height); display: flex; flex-direction: column; }
+        .cis-grid > .cis-card > .card-body { flex: 1; min-height: 0; }
+        .cis-grid > .cis-card:not(.inbox-card) > .card-body { overflow-y: auto; }
+        .inbox-card { display: flex; flex-direction: column; }
+        .inbox-card .card-body { display: flex; flex-direction: column; overflow: hidden; }
+        #inboxView  { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+        #mailList   { flex: 1; min-height: 0; overflow-y: auto; max-height: none; }
+        #logsList   { flex: 1; min-height: 0; overflow-y: auto; max-height: none; }
+        .bottom-grid{ display: grid; grid-template-columns: 1fr 1.7fr; gap: 12px; margin-bottom: 12px; }
+        @media (max-width: 1100px) {
+            .cis-grid, .bottom-grid { grid-template-columns: 1fr; }
+            .cis-grid > .cis-card { height: auto; min-height: 0; }
+            .cis-sidebar { width: 190px; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ── Form ───────────────────────────────────────────────── */
+        .input-group { margin-bottom: 9px; }
+        .input-group label {
+            display: block; font-size: 0.57rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            color: var(--muted); margin-bottom: 3px;
+        }
+        .input-group input,
+        .input-group textarea {
+            width: 100%; background: var(--input-bg); border: 1px solid var(--border2);
+            border-radius: 4px; padding: 7px 11px; color: #C8D8EC;
+            font-family: 'Inter', sans-serif; font-size: 0.83rem;
+            transition: border-color 0.12s, box-shadow 0.12s;
+        }
+        .input-group input::placeholder,
+        .input-group textarea::placeholder { color: #364C66; opacity: 1; }
+        .input-group input:-webkit-autofill,
+        .input-group input:-webkit-autofill:hover,
+        .input-group input:-webkit-autofill:focus {
+            -webkit-text-fill-color: #C8D8EC;
+            box-shadow: 0 0 0 1000px var(--input-bg) inset;
+            -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset;
+            transition: background-color 9999s ease-out 0s;
+        }
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(46,125,211,0.14);
+        }
+        textarea { min-height: 82px; resize: vertical; }
+        #mailBody { min-height: 150px; }
+        .compose-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        /* ── Mode toggle ─────────────────────────────────────────── */
+        .mode-toggle {
+            display: flex; background: var(--surface2);
+            border: 1px solid var(--border); border-radius: 4px;
+            padding: 2px; margin-bottom: 12px; gap: 2px;
+        }
+        .mode-btn {
+            flex: 1; padding: 6px 6px; border-radius: 3px;
+            border: none; background: transparent; color: var(--muted);
+            font-size: 0.72rem; font-weight: 600; cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }
+        .mode-btn:hover:not(.active) { background: rgba(255,255,255,0.03); color: var(--muted2); }
+        .mode-btn.active { background: rgba(46,125,211,0.15); color: #93C5FD; }
+        body.light-mode .mode-toggle { background: #EEF3FB; border-color: #C4D4E8; }
+        body.light-mode .mode-btn.active { background: #DBEAFE; color: #1D4ED8; }
+        body.light-mode .mode-btn:hover:not(.active) { background: #E6EEF8; color: #334155; }
+
+        /* ── Buttons ─────────────────────────────────────────────── */
+        .btn-row { display: flex; gap: 7px; margin-top: 6px; }
+        .btn-primary {
+            background: #17406E; border: 1px solid #2E7DD3;
+            border-radius: 4px; flex: 1; padding: 9px 14px;
+            font-weight: 600; color: #93C5FD; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            transition: background 0.12s, border-color 0.12s;
+            font-size: 0.82rem;
+        }
+        .btn-primary:hover { background: #1C4F8A; border-color: #4A9AE0; }
+        .btn-send { background: #17406E; border-color: #2E7DD3; color: #93C5FD; }
+        .btn-send:hover { background: #1C4F8A; }
+        .btn-outline {
+            background: transparent; border: 1px solid var(--border2);
+            border-radius: 4px; padding: 6px 12px;
+            color: var(--muted2); cursor: pointer;
+            transition: background 0.12s, border-color 0.12s, color 0.12s;
+            font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+        }
+        .btn-outline:hover { background: rgba(255,255,255,0.03); border-color: var(--accent); color: #93C5FD; }
+        .btn-sm { padding: 4px 10px; font-size: 0.7rem; }
+
+        /* ── Result panel ────────────────────────────────────────── */
+        .result-panel { margin-top: 0; padding: 11px; border-radius: 4px; border: 1px solid; display: none; }
+        .result-panel.show { display: block; }
+        .result-panel.phishing  { border-color: rgba(201,48,48,0.35);  background: rgba(201,48,48,0.04);  }
+        .result-panel.legitimate{ border-color: rgba(13,158,116,0.35); background: rgba(13,158,116,0.04); }
+        .result-verdict { font-size: 0.85rem; font-weight: 700; margin-bottom: 9px; display: flex; align-items: center; gap: 7px; }
+        .conf-bar-wrap { margin: 7px 0; }
+        .conf-bar-label { font-size: 0.65rem; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .conf-bar-track { background: #080D14; border-radius: 2px; height: 5px; overflow: hidden; }
+        .conf-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+        .conf-bar-fill.phishing  { background: linear-gradient(90deg, #C97B20, #C93030); }
+        .conf-bar-fill.legitimate{ background: linear-gradient(90deg, #0D9E74, #16B88A); }
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 9px; }
+        .feat-chip { background: var(--input-bg); border: 1px solid var(--border); border-radius: 3px; padding: 5px 8px; font-size: 0.65rem; }
+        .feat-label { color: var(--muted); margin-bottom: 2px; text-transform: uppercase; font-size: 0.55rem; letter-spacing: 0.5px; }
+        .feat-val { font-family: var(--mono); font-weight: 600; color: var(--text); }
+        .feat-val.risk { color: #F08080; }
+        .feat-val.ok   { color: #5AE8B4; }
+        .rule-adj { margin-top: 8px; }
+        .rule-adj-title { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+        .rule-tag { display: inline-flex; align-items: center; gap: 4px; background: rgba(46,125,211,0.09); border: 1px solid rgba(46,125,211,0.22); color: #93C5FD; border-radius: 3px; padding: 2px 7px; font-size: 0.62rem; margin: 2px; }
+
+        /* ── Inbox area ──────────────────────────────────────────── */
+        .view-toggle { display: flex; gap: 4px; margin-bottom: 10px; }
+        .view-btn {
+            padding: 5px 11px; border-radius: 3px; border: 1px solid var(--border);
+            background: transparent; color: var(--muted); font-size: 0.7rem;
+            cursor: pointer; transition: 0.1s;
+        }
+        .view-btn.active { background: rgba(46,125,211,0.1); border-color: var(--accent); color: #93C5FD; }
+        .view-btn:hover:not(.active) { border-color: var(--border2); color: var(--muted2); }
+
+        .inbox-tabs { display: flex; gap: 3px; margin-bottom: 9px; flex-wrap: wrap; }
+        .inbox-tab {
+            padding: 4px 11px; border-radius: 3px; border: 1px solid var(--border);
+            background: transparent; color: var(--muted); font-size: 0.7rem; cursor: pointer; transition: 0.1s;
+        }
+        .inbox-tab.active { background: rgba(46,125,211,0.1); border-color: var(--accent); color: #93C5FD; }
+        .inbox-tab:hover:not(.active) { border-color: var(--border2); color: var(--muted2); }
+
+        .filter-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 9px; }
+        .filter-chip {
+            background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 4px; padding: 7px 8px; cursor: pointer;
+            text-align: center; transition: border-color 0.1s;
+        }
+        .filter-chip:hover { border-color: var(--border2); }
+        .filter-chip.active { border-color: var(--accent); background: rgba(46,125,211,0.05); }
+        .filter-chip-title { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 3px; }
+        .filter-chip-val { font-family: var(--mono); font-size: 1.05rem; font-weight: 700; color: #93C5FD; }
+
+        .search-bar {
+            background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 4px; padding: 7px 11px; margin-bottom: 9px;
+        }
+        .search-bar input { background: transparent; border: none; width: 100%; color: var(--text); font-size: 0.8rem; outline: none; }
+        .search-bar input::placeholder { color: var(--muted); }
+        .search-meta { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--muted); margin-top: 4px; }
+        .search-count { color: #93C5FD; font-family: var(--mono); font-weight: 600; }
+
+        .threat-feed { min-height: 0; max-height: 450px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+
+        .mail-item {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 4px; padding: 10px 12px; cursor: pointer;
+            transition: border-color 0.1s; border-left: 3px solid transparent;
+        }
+        .mail-item:hover { border-color: var(--border2); }
+        .mail-item.phish { border-left-color: var(--red); background: rgba(201,48,48,0.04); }
+        .mail-item.safe  { border-left-color: var(--green); }
+        .item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+        .item-subject { font-weight: 600; font-size: 0.82rem; word-break: break-word; color: var(--text); }
+        .item-meta { font-size: 0.63rem; color: var(--muted); margin-top: 4px; display: flex; gap: 9px; flex-wrap: wrap; }
+        .badge {
+            border-radius: 3px; padding: 2px 6px; font-size: 0.6rem; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .badge-phish { background: rgba(201,48,48,0.14); color: #F08080; border: 1px solid rgba(201,48,48,0.28); }
+        .badge-safe  { background: rgba(13,158,116,0.12); color: #5AE8B4; border: 1px solid rgba(13,158,116,0.24); }
+
+        .mail-detail { display: none; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--border); }
+        .mail-detail.open { display: block; }
+        .detail-row { font-size: 0.72rem; color: #9AB2CC; margin-bottom: 4px; word-break: break-word; }
+        .detail-label { color: var(--muted); font-weight: 600; }
+
+        .conf-bar-wrap { margin: 7px 0; }
+        .detail-conf-wrap { margin: 8px 0; }
+        .breakdown-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 8px 0; }
+        .breakdown-chip { background: var(--input-bg); border: 1px solid var(--border); border-radius: 3px; padding: 5px 8px; }
+        .bc-label { font-size: 0.55rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .bc-val { font-family: var(--mono); font-size: 0.84rem; font-weight: 700; }
+        .bc-val.red    { color: #F08080; }
+        .bc-val.green  { color: #5AE8B4; }
+        .bc-val.orange { color: #FBBF24; }
+        .bc-val.muted  { color: var(--muted2); }
+
+        .detail-body-wrap { margin-top: 9px; }
+        .detail-body-label { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+        .detail-body {
+            padding: 9px; background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 4px; white-space: pre-wrap; word-break: break-word;
+            font-size: 0.74rem; color: #B0C4DC; max-height: 170px; overflow-y: auto;
+            line-height: 1.6; font-family: var(--mono);
+        }
+
+        .hl-url    { color: #FBBF24; font-weight: 600; }
+        .hl-keyword{ background: rgba(201,48,48,0.18); color: #F08080; border-radius: 2px; padding: 0 2px; }
+        .hl-ip-url { color: #EF4444; font-weight: 700; }
+
+        .url-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+        .url-tag { background: rgba(201,123,32,0.09); border: 1px solid rgba(201,123,32,0.28); color: #FBBF24; border-radius: 3px; padding: 2px 6px; font-size: 0.6rem; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .url-tag.ip { background: rgba(201,48,48,0.09); border-color: rgba(201,48,48,0.28); color: #F08080; }
+
+        /* ── Logs ────────────────────────────────────────────────── */
+        .log-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 9px 12px; margin-bottom: 5px; }
+        .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .log-sender   { color: var(--muted); font-size: 0.66rem; }
+        .log-features { color: var(--muted); font-size: 0.65rem; margin-top: 3px; font-family: var(--mono); }
+
+        /* ── Domain card ─────────────────────────────────────────── */
+        .domain-result { margin-top: 9px; padding: 9px 11px; border-radius: 4px; font-size: 0.74rem; display: none; }
+        .domain-result.show { display: block; }
+        .domain-result.low    { background: rgba(13,158,116,0.06);  border: 1px solid rgba(13,158,116,0.24);  }
+        .domain-result.medium { background: rgba(201,123,32,0.06);  border: 1px solid rgba(201,123,32,0.24);  }
+        .domain-result.high   { background: rgba(201,48,48,0.06);   border: 1px solid rgba(201,48,48,0.24);   }
+        .risk-score-bar { height: 4px; border-radius: 2px; background: #080D14; overflow: hidden; margin: 5px 0; }
+        .risk-score-fill { height: 100%; border-radius: 2px; }
+
+        /* ── Pipeline ────────────────────────────────────────────── */
+        .pipe-row {
+            display: flex; align-items: center; gap: 0;
+            flex-wrap: nowrap; padding: 6px 0; justify-content: center;
+            overflow-x: auto;
+        }
+        .pipe-step {
+            text-align: center; padding: 9px 12px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 5px; flex-shrink: 0;
+        }
+        .pipe-step-icon  { font-size: 1rem; margin-bottom: 4px; }
+        .pipe-step-label { font-size: 0.6rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.3px; }
+        .pipe-step-sub   { font-size: 0.53rem; color: var(--muted); margin-top: 2px; }
+        .pipe-arrow { flex-shrink: 0; padding: 0 4px; color: #253050; font-size: 0.8rem; }
+
+        /* ── Status ──────────────────────────────────────────────── */
+        .status-msg { margin-top: 7px; font-size: 0.74rem; text-align: center; padding: 5px; border-radius: 3px; }
+        .empty-state { text-align: center; padding: 36px 14px; color: var(--muted); }
+        .empty-state i { font-size: 1.8rem; opacity: 0.28; margin-bottom: 10px; display: block; }
+
+        /* ── Light mode ──────────────────────────────────────────── */
+        body.light-mode { background: #EEF2F8; color: #1A2535; }
+        body.light-mode .cis-sidebar,
+        body.light-mode .top-navbar { background: #FFFFFF; border-color: #CCDAE8; }
+        body.light-mode .stat-card,
+        body.light-mode .cis-card { background: #FFFFFF; border-color: #CCDAE8; }
+        body.light-mode .mail-item { background: #FAFCFF; border-color: #CCDAE8; }
+        body.light-mode .mail-item.phish { background: #FFF5F5; }
+        body.light-mode .nav-item { color: #4A607A; }
+        body.light-mode .nav-item.active { background: #EAF2FF; color: #1D4ED8; border-left-color: #2563EB; }
+        body.light-mode .nav-item:hover:not(.active) { background: #F2F7FF; color: #1E293B; }
+        body.light-mode .input-group input,
+        body.light-mode .input-group textarea,
+        body.light-mode .search-bar { background: #F4F7FC; border-color: #BDD0E4; color: #0F172A; }
+        body.light-mode .input-group input:-webkit-autofill,
+        body.light-mode .input-group input:-webkit-autofill:hover,
+        body.light-mode .input-group input:-webkit-autofill:focus {
+            -webkit-text-fill-color: #0F172A;
+            box-shadow: 0 0 0 1000px #F4F7FC inset;
+            -webkit-box-shadow: 0 0 0 1000px #F4F7FC inset;
+        }
+        body.light-mode .input-group input::placeholder,
+        body.light-mode .input-group textarea::placeholder { color: #8BA0B8; }
+        body.light-mode .search-bar input { color: #0F172A; }
+        body.light-mode .server-status { background: #F2F6FC; border-color: #C4D4E8; }
+        body.light-mode .logo-text { color: #0F172A; }
+        body.light-mode .pipe-step { background: #F4F7FC; border-color: #CCDAE8; }
+        body.light-mode .pipe-step-label { color: #1E293B; }
+        body.light-mode .pipe-step-sub   { color: #546880; }
+        body.light-mode .detail-row { color: #1E293B; }
+        body.light-mode .breakdown-chip,
+        body.light-mode .filter-chip,
+        body.light-mode .log-item,
+        body.light-mode .detail-body { background: #F4F7FC; border-color: #C4D4E8; color: #1E293B; }
+        body.light-mode .inbox-tab.active,
+        body.light-mode .view-btn.active { background: #EAF2FF; color: #1D4ED8; }
+        body.light-mode .mode-toggle { background: #EEF3FB; border-color: #C4D4E8; }
+        body.light-mode .mode-btn.active { background: #DBEAFE; color: #1D4ED8; }
+        body.light-mode .user-chip { color: #546880; }
+        body.light-mode .user-chip.active { background: #EAF2FF; color: #1D4ED8; }
+        body.light-mode .surface2 { background: #F4F7FC; }
+
+        footer {
+            margin-top: 24px; text-align: center; font-size: 0.62rem;
+            color: var(--muted); border-top: 1px solid var(--border);
+            padding-top: 12px; letter-spacing: 0.5px;
+        }
+        body.light-mode footer { border-top-color: #CCDAE8; }
+
+        /* ── VirusTotal file scan result badge ─────────────────────────────── */
+        .vt-scanning {
+            background: var(--surface2); color: var(--muted);
+        }
+        .vt-malicious {
+            background: rgba(201,48,48,0.18); color: #F08080;
+        }
+        .vt-suspicious {
+            background: rgba(240,170,50,0.18); color: #F0AA32;
+        }
+        .vt-clean {
+            background: rgba(90,232,180,0.12); color: #5AE8B4;
+        }
+        .vt-unknown {
+            background: var(--surface2); color: var(--muted);
+        }
+        .vt-error {
+            background: rgba(240,128,128,0.12); color: #F08080;
+        }
+        body.light-mode .vt-scanning { background: #EEF3FB; color: #546880; }
+        body.light-mode .vt-malicious { background: #FEE2E2; color: #B91C1C; }
+        body.light-mode .vt-suspicious { background: #FEF3C7; color: #92400E; }
+        body.light-mode .vt-clean { background: #D1FAE5; color: #065F46; }
+        body.light-mode .vt-unknown { background: #EEF3FB; color: #546880; }
+        body.light-mode .vt-error { background: #FEE2E2; color: #B91C1C; }
+        body.light-mode #mailAttachment { background: #F4F7FC !important; color: #0F172A !important; border-color: #BDD0E4 !important; }
+
+        /* ── File Scanner section ──────────────────────────────────────────── */
+        .fs-layout {
+            display: grid; grid-template-columns: 1fr 280px; gap: 14px; align-items: start;
+        }
+        @media (max-width: 900px) { .fs-layout { grid-template-columns: 1fr; } }
+
+        .fs-drop-zone {
+            border: 2px dashed var(--border2); border-radius: 6px;
+            padding: 28px 20px; text-align: center; cursor: pointer;
+            background: var(--surface2); transition: border-color .2s, background .2s;
+            min-height: 110px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 6px;
+        }
+        .fs-drop-zone:hover, .fs-drop-zone.dragover {
+            border-color: var(--accent); background: rgba(46,125,211,0.06);
+        }
+        .fs-drop-icon { font-size: 2rem; color: var(--accent); margin-bottom: 4px; }
+        .fs-drop-label { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+        .fs-drop-sub   { font-size: 0.68rem; color: var(--muted); }
+
+        .fs-info-col { display: flex; flex-direction: column; }
+        .fs-file-info {
+            display: flex; gap: 10px; align-items: flex-start;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 5px; padding: 10px 12px;
+        }
+        .fs-file-icon-wrap { padding-top: 2px; }
+        .fs-file-icon { font-size: 1.4rem; color: var(--accent); }
+        .fs-file-name { font-size: 0.78rem; font-weight: 600; color: var(--text); word-break: break-all; }
+        .fs-file-size { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+        .fs-file-hash { font-size: 0.6rem; color: var(--muted); margin-top: 3px; font-family: var(--mono); word-break: break-all; }
+        .fs-nofile-hint { font-size: 0.73rem; color: var(--muted); text-align: center; padding: 14px 0; }
+
+        .fs-result {
+            margin-top: 14px; border-radius: 5px; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .fs-result-header {
+            padding: 10px 14px; font-size: 0.85rem; font-weight: 700;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .fs-result-header.malicious { background: rgba(201,48,48,0.18);  color: #F08080; }
+        .fs-result-header.suspicious{ background: rgba(240,170,50,0.18); color: #F0AA32; }
+        .fs-result-header.clean     { background: rgba(90,232,180,0.12); color: #5AE8B4; }
+        .fs-result-header.unknown   { background: var(--surface2);       color: var(--muted); }
+
+        .fs-stats-row {
+            display: flex; gap: 0; border-top: 1px solid var(--border);
+        }
+        .fs-stat {
+            flex: 1; padding: 8px 10px; text-align: center;
+            border-right: 1px solid var(--border);
+        }
+        .fs-stat:last-child { border-right: none; }
+        .fs-stat-val { font-size: 1.2rem; font-weight: 700; font-family: var(--mono); }
+        .fs-stat-lbl { font-size: 0.58rem; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-top: 2px; }
+        .fs-stat-val.red    { color: #F08080; }
+        .fs-stat-val.orange { color: #F0AA32; }
+        .fs-stat-val.green  { color: #5AE8B4; }
+        .fs-stat-val.muted  { color: var(--muted); }
+
+        .fs-detail {
+            padding: 10px 14px; font-size: 0.72rem; color: var(--muted2);
+            border-top: 1px solid var(--border); line-height: 1.6;
+        }
+
+        /* light-mode overrides */
+        body.light-mode .fs-drop-zone    { background: #F4F7FC; border-color: #BDD0E4; }
+        body.light-mode .fs-drop-zone:hover,
+        body.light-mode .fs-drop-zone.dragover { background: #EAF2FF; border-color: #2563EB; }
+        body.light-mode .fs-file-info    { background: #F4F7FC; border-color: #C4D4E8; }
+        body.light-mode .fs-result       { border-color: #C4D4E8; }
+        body.light-mode .fs-stats-row    { border-color: #C4D4E8; }
+        body.light-mode .fs-stat         { border-color: #C4D4E8; }
+        body.light-mode .fs-detail       { border-color: #C4D4E8; color: #4A607A; }
+        body.light-mode .fs-result-header.malicious  { background: #FEE2E2; color: #B91C1C; }
+        body.light-mode .fs-result-header.suspicious { background: #FEF3C7; color: #92400E; }
+        body.light-mode .fs-result-header.clean      { background: #D1FAE5; color: #065F46; }
+        body.light-mode .fs-result-header.unknown    { background: #EEF3FB; color: #546880; }
+    </style>
+</head>
+<body>
+<div class="cis-wrapper">
+
+    <!-- ── Sidebar ── -->
+    <div class="cis-sidebar">
+        <div class="logo-area">
+            <div class="logo-icon"><img src="/web-icon.png" alt="CatchFish"></div>
+            <div class="logo-text">CatchFish<span class="logo-sub">Phishing Detection</span></div>
+        </div>
+
+        <div class="nav-section">Overview</div>
+        <div class="nav-menu">
+            <a href="/" class="nav-item"><i class="fas fa-tachometer-alt"></i><span>Overview</span></a>
+            <a href="/alerts" class="nav-item" id="navAlerts"><i class="fas fa-bell"></i><span>Alerts &amp; Notifications</span><span class="nav-badge" id="navAlertBadge"></span></a>
+        </div>
+        <div class="nav-section">ML Pipeline</div>
+        <div class="nav-menu">
+            <a href="/dataset" class="nav-item"><i class="fas fa-database"></i><span>Dataset</span></a>
+            <a href="/feature-extraction" class="nav-item"><i class="fas fa-microscope"></i><span>Feature Extraction</span></a>
+            <a href="/post-ml" class="nav-item"><i class="fas fa-code-branch"></i><span>Post ML</span></a>
+            <a href="/model" class="nav-item"><i class="fas fa-brain"></i><span>Model</span></a>
+        </div>
+        <div class="nav-section">Security Intelligence</div>
+        <div class="nav-menu">
+            <a href="/virustotal-file-scanner" class="nav-item"><i class="fas fa-virus-slash"></i><span>VirusTotal Scanner</span></a>
+            <a href="/domain-intelligence" class="nav-item"><i class="fas fa-globe"></i><span>Domain Intelligence</span></a>
+        </div>
+        <div class="nav-section">Console</div>
+        <div class="nav-menu">
+            <a href="/mail-dashboard" class="nav-item active"><i class="fas fa-envelope-open-text"></i><span>Mail Dashboard</span></a>
+        </div>
+
+        <div class="sidebar-section">Local Users <span style="color:var(--accent)">@local.com</span></div>
+        <div id="userList">
+            <div class="user-chip active" data-user="all" onclick="selectUser('all',this)">
+                <div class="user-dot" style="background:var(--accent)"></div> All Inboxes
+            </div>
+        </div>
+        <button class="add-user-btn" onclick="showAddUser()"><i class="fas fa-plus"></i> Add User</button>
+        <div id="addUserForm" style="display:none;margin-top:8px;">
+            <div class="input-group" style="margin-bottom:6px;">
+                <input type="text" id="newUsername" placeholder="username (e.g. alice)">
+            </div>
+            <button class="btn-primary btn-sm" onclick="addLocalUser()" style="width:100%;border-radius:4px;padding:7px;font-size:0.73rem;">
+                <i class="fas fa-check"></i> Create
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Main ── -->
+    <div class="cis-main">
+
+        <!-- Top bar -->
+        <div class="top-navbar">
+            <div class="page-title"><i class="fas fa-shield-virus"></i> Mail Threat Console</div>
+            <div class="nav-tools">
+                <div class="server-status">
+                    <span class="status-dot" id="serverDot"></span>
+                    <span id="serverText">Checking…</span>
+                </div>
+                <button class="theme-toggle" id="themeToggle" type="button" title="Toggle day / night mode">
+                    <span class="tt-pill"></span>
+                    <span class="tt-icon tt-moon"><i class="fas fa-moon"></i></span>
+                    <span class="tt-icon tt-sun"><i class="fas fa-sun"></i></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card"><div class="stat-label">Total Scanned</div><div class="stat-value" id="statTotal">0</div></div>
+            <div class="stat-card"><div class="stat-label">Phishing Detected</div><div class="stat-value red" id="statPhish">0</div></div>
+            <div class="stat-card"><div class="stat-label">Safe Emails</div><div class="stat-value green" id="statSafe">0</div></div>
+            <div class="stat-card"><div class="stat-label">Avg Confidence</div><div class="stat-value orange" id="statConf">—</div></div>
+        </div>
+
+        <!-- Main grid: Compose | Inbox -->
+        <div class="cis-grid">
+
+            <!-- LEFT: Compose & Send -->
+            <div class="cis-card">
+                <div class="card-header"><i class="fas fa-pen-to-square"></i> Compose &amp; Send</div>
+                <div class="card-body">
+                    <div class="compose-row">
+                        <div class="input-group" style="margin-bottom:0">
+                            <label>From</label>
+                            <input type="text" id="fromAddress" placeholder="sender@local.com" list="fromSuggestions" autocomplete="off">
+                            <datalist id="fromSuggestions"></datalist>
+                        </div>
+                        <div class="input-group" style="margin-bottom:0">
+                            <label>To</label>
+                            <input type="text" id="toAddress" placeholder="recipient@domain" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="input-group" style="margin-top:9px">
+                        <label>Subject</label>
+                        <input type="text" id="mailSubject" placeholder="Email subject line">
+                    </div>
+                    <div class="input-group">
+                        <label>Body</label>
+                        <textarea id="mailBody" placeholder="Write email content here...&#10;&#10;Paste URLs to test: https://example.com"></textarea>
+                    </div>
+                    <div class="input-group" id="attachmentGroup">
+                        <label><i class="fas fa-paperclip" style="color:var(--accent)"></i> Attachment</label>
+                        <input type="file" id="mailAttachment" style="color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:5px 8px;width:100%;box-sizing:border-box;font-size:0.78rem;cursor:pointer;">
+                        <div id="attachmentInfo" style="font-size:0.7rem;color:var(--muted);margin-top:4px;"></div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn-primary btn-send" id="actionBtn" onclick="sendEmailNow()">
+                            <i class="fas fa-paper-plane"></i>
+                            <span id="actionBtnLabel">Send Email</span>
+                        </button>
+                    </div>
+
+                    <div id="sendStatus" class="status-msg"></div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Inbox + Logs -->
+            <div class="cis-card inbox-card">
+                <div class="card-header">
+                    <i class="fas fa-inbox"></i>
+                    <span id="inboxTitle">All Inboxes</span>
+                    <div class="card-header-actions">
+                        <button class="btn-outline btn-sm" id="refreshBtn" onclick="refreshInbox(true)">
+                            <i class="fas fa-rotate-right"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="viewInbox" onclick="switchView('inbox')">
+                            <i class="fas fa-envelope"></i> Inbox
+                        </button>
+                        <button class="view-btn" id="viewLogs" onclick="switchView('logs')">
+                            <i class="fas fa-clipboard-list"></i> Scan Logs
+                        </button>
+                    </div>
+
+                    <!-- Inbox view -->
+                    <div id="inboxView">
+                        <div class="inbox-tabs" id="inboxTabs">
+                            <button class="inbox-tab active" data-user="all" onclick="selectInboxTab('all',this)">All</button>
+                        </div>
+                        <div class="filter-row">
+                            <div class="filter-chip active" data-filter="all" onclick="applyFilter('all',this)">
+                                <div class="filter-chip-title">All</div>
+                                <div class="filter-chip-val" id="fcAll">0</div>
+                            </div>
+                            <div class="filter-chip" data-filter="phishing" onclick="applyFilter('phishing',this)">
+                                <div class="filter-chip-title">Phishing</div>
+                                <div class="filter-chip-val" id="fcPhish">0</div>
+                            </div>
+                            <div class="filter-chip" data-filter="safe" onclick="applyFilter('safe',this)">
+                                <div class="filter-chip-title">Safe</div>
+                                <div class="filter-chip-val" id="fcSafe">0</div>
+                            </div>
+                        </div>
+                        <div class="search-bar">
+                            <input type="text" id="searchInput" placeholder="Search here..." oninput="onSearch()">
+                            <div class="search-meta">
+                                <span>Live search all fields</span>
+                                <span class="search-count" id="searchCount">0 results</span>
+                            </div>
+                        </div>
+                        <div id="mailList" class="threat-feed">
+                            <div class="empty-state"><i class="fas fa-inbox"></i>Click Refresh to load inbox</div>
+                        </div>
+                    </div>
+
+                    <!-- Logs view -->
+                    <div id="logsView" style="display:none">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
+                            <span style="font-size:0.68rem;color:var(--muted)">Full scan trail with rule adjustments</span>
+                            <button class="btn-outline btn-sm" onclick="loadLogs()"><i class="fas fa-sync-alt"></i> Reload</button>
+                        </div>
+                        <div id="logsList" class="threat-feed">
+                            <div class="empty-state"><i class="fas fa-clipboard-list"></i>Click Reload to fetch logs</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom row: Pipeline -->
+        <div class="bottom-grid">
+            <!-- Detection Pipeline -->
+            <div class="cis-card" style="grid-column: 1 / -1;">
+                <div class="card-header"><i class="fas fa-diagram-project"></i> Detection Pipeline</div>
+                <div class="card-body">
+                    <div class="pipe-row">
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#60A5FA"><i class="fas fa-envelope-open"></i></div>
+                            <div class="pipe-step-label">Email In</div>
+                            <div class="pipe-step-sub">SMTP · IMAP · Manual</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#A78BFA"><i class="fas fa-broom"></i></div>
+                            <div class="pipe-step-label">Preprocess</div>
+                            <div class="pipe-step-sub">HTML strip</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#34D399"><i class="fas fa-microscope"></i></div>
+                            <div class="pipe-step-label">Feature Extract</div>
+                            <div class="pipe-step-sub">URLs · Domain</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#FBBF24"><i class="fas fa-brain"></i></div>
+                            <div class="pipe-step-label">ML Model</div>
+                            <div class="pipe-step-sub" id="pipeModelName">Best Classifier</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#F87171"><i class="fas fa-code-branch"></i></div>
+                            <div class="pipe-step-label">Rule Engine</div>
+                            <div class="pipe-step-sub">Domain · IP · TLD</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#E879F9"><i class="fas fa-scale-balanced"></i></div>
+                            <div class="pipe-step-label">Threshold</div>
+                            <div class="pipe-step-sub">0.60 Anti-FP</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#38BDF8"><i class="fas fa-database"></i></div>
+                            <div class="pipe-step-label">Log &amp; Store</div>
+                            <div class="pipe-step-sub">PostgreSQL</div>
+                        </div>
+                        <div class="pipe-arrow">→</div>
+                        <div class="pipe-step">
+                            <div class="pipe-step-icon" style="color:#10B981"><i class="fas fa-bell"></i></div>
+                            <div class="pipe-step-label">Alert Feed</div>
+                            <div class="pipe-step-sub">Real-time</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer><i class="fas fa-diagram-project"></i> Detection Pipeline &mdash; CatchFish Real-time ML Phishing Detection System</footer>
+    </div>
+</div>
+
+<script>
+// ── Utilities ───────────────────────────────────────────────────────────────
+
+async function fetchJSON(url, opts = {}) {
+    const r = await fetch(url, opts);
+    if (!r.ok) {
+        let msg = `HTTP ${r.status}`;
+        try { const d = await r.json(); msg = d.error || d.message || msg; } catch(e) {}
+        throw new Error(msg);
+    }
+    return r.json();
+}
+
+function escHtml(s) {
+    if (!s) return '';
+    return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function normBody(raw) {
+    if (!raw) return '(No body)';
+    const v = String(raw);
+    if (!/<[a-z][\s\S]*>/i.test(v)) return v;
+    const doc = new DOMParser().parseFromString(v, 'text/html');
+    doc.querySelectorAll('script,style,noscript').forEach(e => e.remove());
+    return ((doc.body && doc.body.innerText) || doc.documentElement.textContent || v)
+        .replace(/\n{3,}/g,'\n\n').trim() || v;
+}
+
+function senderDomain(addr) {
+    const m = String(addr||'').toLowerCase().match(/@([a-z0-9.-]+\.[a-z]{2,})$/i);
+    return m ? m[1] : '';
+}
+
+const PHISH_KEYWORDS = [
+    'urgent','click here','verify now','security alert','account suspended',
+    'password expired','limited time','claim now','confirm identity',
+    'unusual activity','unauthorized access','action required','your account',
+    'update your','win a prize','congratulations','free gift','limited offer',
+];
+
+function highlightBody(rawText) {
+    let text = escHtml(normBody(rawText));
+
+    // Highlight URLs (IP-based = red, others = orange)
+    text = text.replace(/(https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}[^\s&lt;&gt;"']*)/g,
+        '<span class="hl-ip-url" title="IP-based URL — suspicious">$1</span>');
+    text = text.replace(/(https?:\/\/[^\s&lt;&gt;"']+)/g, match => {
+        if (match.includes('hl-ip-url')) return match;
+        return `<span class="hl-url" title="URL detected">${match}</span>`;
+    });
+    text = text.replace(/(www\.[^\s&lt;&gt;"']+)/g,
+        '<span class="hl-url" title="URL detected">$1</span>');
+
+    // Highlight phishing keywords (case-insensitive)
+    PHISH_KEYWORDS.forEach(kw => {
+        const re = new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+        text = text.replace(re, '<span class="hl-keyword">$1</span>');
+    });
+
+    return text;
+}
+
+function renderConfBar(prob, panelClass) {
+    const pct = (prob * 100).toFixed(1);
+    return `
+        <div class="conf-bar-wrap">
+            <div class="conf-bar-label"><span>Phishing Probability</span><span>${pct}%</span></div>
+            <div class="conf-bar-track">
+                <div class="conf-bar-fill ${panelClass}" style="width:${pct}%"></div>
+            </div>
+        </div>`;
+}
+
+function renderBreakdown(feat) {
+    if (!feat) return '';
+    const chips = [
+        ['Links', feat.links_count, feat.links_count > 2 ? 'red' : feat.links_count > 0 ? 'orange' : 'green'],
+        ['Attachment', feat.has_attachment ? 'Yes' : 'No', feat.has_attachment ? 'orange' : 'green'],
+        ['Urgent Keywords', feat.urgent_keywords ? 'Yes' : 'No', feat.urgent_keywords ? 'red' : 'green'],
+        ['IP URLs', feat.ip_url_count || 0, feat.ip_url_count > 0 ? 'red' : 'green'],
+        ['Shorteners', feat.shortener_url_count || 0, feat.shortener_url_count > 0 ? 'red' : 'green'],
+        ['Legit Domain', feat.legitimate_domain ? 'Yes' : 'No', feat.legitimate_domain ? 'green' : 'orange'],
+        ['Susp. TLD', feat.suspicious_tld ? 'Yes' : 'No', feat.suspicious_tld ? 'red' : 'green'],
+        ['HTTP Ratio', feat.http_ratio ? (feat.http_ratio * 100).toFixed(0)+'%' : '0%', feat.http_ratio > 0.5 ? 'red' : 'green'],
+        ['Domain Digits', feat.domain_has_digits ? 'Yes' : 'No', feat.domain_has_digits && !feat.legitimate_domain ? 'orange' : 'muted'],
+    ];
+    return `<div class="breakdown-grid">${chips.map(([label,val,cls]) =>
+        `<div class="breakdown-chip"><div class="bc-label">${label}</div><div class="bc-val ${cls}">${escHtml(String(val))}</div></div>`
+    ).join('')}</div>`;
+}
+
+function renderUrlTags(urls) {
+    if (!urls || !urls.length) return '';
+    const isIP = u => /https?:\/\/\d{1,3}\.\d{1,3}/.test(u);
+    return '<div class="url-tags">' +
+        urls.slice(0,8).map(u =>
+            `<span class="url-tag${isIP(u)?' ip':''}" title="${escHtml(u)}">${escHtml(u)}</span>`
+        ).join('') + '</div>';
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+let allEmails = [];
+let activeFilter = 'all';
+let activeUser = 'all';
+let activeSearch = '';
+let currentView = 'inbox';
+let localUsers = [];
+const CACHE_VER = '5';
+const CACHE_MAX = 60000;
+
+function saveCache(items) {
+    try {
+        localStorage.setItem('sjCacheVer', CACHE_VER);
+        localStorage.setItem('sjCache', JSON.stringify(items));
+        localStorage.setItem('sjCacheTime', Date.now());
+    } catch(e){}
+}
+
+function loadCache() {
+    try {
+        if (localStorage.getItem('sjCacheVer') !== CACHE_VER) return [];
+        if (Date.now() - Number(localStorage.getItem('sjCacheTime')) > CACHE_MAX) return [];
+        return JSON.parse(localStorage.getItem('sjCache') || '[]');
+    } catch(e){ return []; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('mailAttachment').addEventListener('change', function() {
+        const info = document.getElementById('attachmentInfo');
+        if (this.files && this.files[0]) {
+            const f = this.files[0];
+            const kb = (f.size / 1024).toFixed(1);
+            info.textContent = `${f.name}  (${kb} KB)`;
+        } else {
+            info.textContent = '';
+        }
+    });
+});
+
+// ── User management ──────────────────────────────────────────────────────────
+
+async function loadLocalUsers() {
+    try {
+        const data = await fetchJSON('/api/users');
+        localUsers = data.users || [];
+        renderUserSidebar();
+        renderInboxTabs();
+        renderFromDropdown();
+    } catch(e) { console.warn('Could not load users:', e); }
+}
+
+function renderUserSidebar() {
+    const ul = document.getElementById('userList');
+    ul.innerHTML = `<div class="user-chip ${activeUser==='all'?'active':''}" data-user="all" onclick="selectUser('all',this)">
+        <div class="user-dot" style="background:var(--accent)"></div> All Inboxes
+    </div>`;
+    localUsers.forEach(u => {
+        const d = document.createElement('div');
+        d.className = `user-chip ${activeUser===u.email?'active':''}`;
+        d.dataset.user = u.email;
+        d.onclick = () => { document.querySelectorAll('.user-chip').forEach(c=>c.classList.remove('active')); d.classList.add('active'); selectUser(u.email, d); };
+        d.innerHTML = `<div class="user-dot"></div> ${escHtml(u.email)}`;
+        ul.appendChild(d);
+    });
+}
+
+function renderInboxTabs() {
+    const tabs = document.getElementById('inboxTabs');
+    tabs.innerHTML = `<button class="inbox-tab ${activeUser==='all'?'active':''}" data-user="all" onclick="selectInboxTab('all',this)">All</button>`;
+    localUsers.forEach(u => {
+        const btn = document.createElement('button');
+        btn.className = `inbox-tab ${activeUser===u.email?'active':''}`;
+        btn.dataset.user = u.email;
+        btn.textContent = u.username;
+        btn.title = u.email;
+        btn.onclick = () => selectInboxTab(u.email, btn);
+        tabs.appendChild(btn);
+    });
+}
+
+function renderFromDropdown() {
+    const dl = document.getElementById('fromSuggestions');
+    if (!dl) return;
+    dl.innerHTML = '';
+    localUsers.forEach(u => {
+        const o = document.createElement('option');
+        o.value = u.email;
+        dl.appendChild(o);
+    });
+}
+
+function selectUser(user, el) {
+    activeUser = user;
+    document.querySelectorAll('.user-chip').forEach(c => c.classList.toggle('active', c.dataset.user === user));
+    document.querySelectorAll('.inbox-tab').forEach(t => t.classList.toggle('active', t.dataset.user === user));
+    document.getElementById('inboxTitle').textContent = user === 'all' ? 'All Inboxes' : `${user}`;
+    renderEmailList();
+}
+
+function selectInboxTab(user, el) {
+    selectUser(user, el);
+}
+
+function showAddUser() {
+    const f = document.getElementById('addUserForm');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block') document.getElementById('newUsername').focus();
+}
+
+async function addLocalUser() {
+    const username = (document.getElementById('newUsername').value || '').trim();
+    if (!username) return;
+    try {
+        const r = await fetchJSON('/api/users/add', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({username})
+        });
+        document.getElementById('newUsername').value = '';
+        document.getElementById('addUserForm').style.display = 'none';
+        await loadLocalUsers();
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── Action (send local email) ───────────────────────────────────────────────
+
+let _sending = false;
+
+async function sendEmailNow() {
+    // Guard: prevent duplicate sends from double-clicks or rapid re-clicks
+    if (_sending) return;
+
+    const from = document.getElementById('fromAddress').value.trim();
+    const to   = document.getElementById('toAddress').value.trim();
+    const subj = document.getElementById('mailSubject').value.trim();
+    const body = document.getElementById('mailBody').value;
+    const stat = document.getElementById('sendStatus');
+    const btn  = document.getElementById('actionBtn');
+
+    const fileInput = document.getElementById('mailAttachment');
+    const attachedFile = (fileInput.files && fileInput.files[0]) ? fileInput.files[0] : null;
+
+    if (!from) { stat.innerHTML = '<span style="color:#F08080">Select a From address to send.</span>'; return; }
+    if (!to)   { stat.innerHTML = '<span style="color:#F08080">Enter a To address to send.</span>'; return; }
+    if (!body && !subj && !attachedFile) {
+        stat.innerHTML = '<span style="color:#F08080">Please enter message content or add an attachment.</span>';
+        return;
+    }
+
+    _sending = true;
+    btn.disabled = true;
+    stat.innerHTML = '<span style="color:#93C5FD"><i class="fas fa-spinner fa-spin"></i> Sending...</span>';
+
+    try {
+        const sendPayload = { from_address: from, to_address: to, subject: subj, body };
+
+        if (attachedFile) {
+            const b64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(attachedFile);
+            });
+            sendPayload.attachment_b64   = b64;
+            sendPayload.attachment_name  = attachedFile.name;
+            sendPayload.attachment_mime  = attachedFile.type || 'application/octet-stream';
+        }
+
+        await fetchJSON('/api/send-local', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(sendPayload)
+        });
+
+        const attachNote = attachedFile ? ` with attachment <strong>${escHtml(attachedFile.name)}</strong>` : '';
+        stat.innerHTML = `<span style="color:#5AE8B4"><i class="fas fa-check-circle"></i> Sent to <strong>${escHtml(to)}</strong>${attachNote} via Local SMTP.</span>`;
+        fileInput.value = '';
+        document.getElementById('attachmentInfo').textContent = '';
+        setTimeout(() => refreshInbox(true), 1200);
+    } catch(e) {
+        stat.innerHTML = `<span style="color:#F08080"><i class="fas fa-exclamation-triangle"></i> ${escHtml(e.message)}</span>`;
+    } finally {
+        _sending = false;
+        btn.disabled = false;
+    }
+}
+
+// ── Inbox data ────────────────────────────────────────────────────────────────
+
+function getFilteredEmails() {
+    let items = allEmails.filter(m => m.prediction !== 'phishing');
+
+    // User filter
+    if (activeUser !== 'all') {
+        items = items.filter(m => (m.recipient || '').toLowerCase() === activeUser.toLowerCase());
+    }
+
+    // Prediction filter
+    if (activeFilter === 'phishing') items = items.filter(m => m.prediction === 'phishing');
+    else if (activeFilter === 'safe') items = items.filter(m => m.prediction !== 'phishing');
+
+    // Search
+    const q = activeSearch.toLowerCase();
+    if (q) {
+        items = items.filter(m =>
+            [m.sender, m.recipient, m.subject, m.body]
+                .map(v => String(v||'').toLowerCase()).join(' ').includes(q)
+        );
+    }
+
+    return items;
+}
+
+function renderEmailList() {
+    const cont = document.getElementById('mailList');
+    const items = getFilteredEmails();
+    const phishCount = 0;
+    const safeCount  = items.length;
+    document.getElementById('fcAll').textContent   = allEmails.length;
+    document.getElementById('fcPhish').textContent = phishCount;
+    document.getElementById('fcSafe').textContent  = safeCount;
+    document.getElementById('searchCount').textContent = `${items.length} result${items.length!==1?'s':''}`;
+
+    if (!items.length) {
+        cont.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i>${activeSearch ? 'No matching emails' : 'No emails in this view'}</div>`;
+        return;
+    }
+
+    cont.innerHTML = items.map((m, idx) => {
+        const isPhish = m.prediction === 'phishing';
+        const prob = (Number(m.probability||0)*100).toFixed(1);
+        const dt = m.received_at ? new Date(m.received_at).toLocaleString() : '—';
+        const uid = `mail-${m.id || idx}`;
+
+        // Parse features_json if present
+        let feat = {};
+        try { feat = JSON.parse(m.features_json || '{}'); } catch(e){}
+
+        // Parse raw_urls from stored data or derive
+        const rawUrls = (feat.ip_url_count > 0 || feat.links_count > 0) ? [] : [];
+
+        return `<div class="mail-item ${isPhish?'phish':'safe'}" id="${uid}">
+            <div class="item-top">
+                <div class="item-subject">${escHtml(m.subject||'(No subject)')}</div>
+                <div class="badge ${isPhish?'badge-phish':'badge-safe'}" style="flex-shrink:0">
+                    ${isPhish ? '⚠ Phishing' : '✓ Safe'}
+                </div>
+            </div>
+            <div class="item-meta">
+                <span><i class="fas fa-user" style="margin-right:3px"></i>${escHtml(m.sender||'')}</span>
+                <span><i class="fas fa-arrow-right" style="margin-right:3px"></i>${escHtml(m.recipient||'')}</span>
+                <span><i class="fas fa-clock" style="margin-right:3px"></i>${dt}</span>
+                <span style="color:${isPhish?'#F08080':'#5AE8B4'};font-weight:600;font-family:var(--mono)">${prob}%</span>
+            </div>
+            <div class="mail-detail" id="detail-${uid}">
+                ${renderConfBar(Number(m.probability||0), isPhish?'phishing':'legitimate')}
+                <div class="breakdown-grid" style="margin:8px 0">${renderBreakdown(feat)||''}</div>
+                ${feat.ip_url_count>0 || feat.shortener_url_count>0 ? `
+                    <div style="font-size:0.68rem;color:#F08080;margin-bottom:5px;">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        ${feat.ip_url_count>0 ? ' IP-based URL detected.' : ''}
+                        ${feat.shortener_url_count>0 ? ' URL shortener detected.' : ''}
+                    </div>` : ''}
+                <div class="detail-body-wrap">
+                    <div class="detail-body-label"><i class="fas fa-envelope-open-text"></i> Email Body</div>
+                    <div class="detail-body">${highlightBody(m.body)}</div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Click-to-expand
+    cont.querySelectorAll('.mail-item').forEach(item => {
+        item.addEventListener('click', e => {
+            if (e.target.closest('.mail-detail')) { e.stopPropagation(); return; }
+            const detail = item.querySelector('.mail-detail');
+            if (!detail) return;
+            const wasOpen = detail.classList.contains('open');
+            cont.querySelectorAll('.mail-detail.open').forEach(d => d.classList.remove('open'));
+            if (!wasOpen) detail.classList.add('open');
+        });
+    });
+}
+
+function applyFilter(filter, el) {
+    activeFilter = filter;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === filter));
+    renderEmailList();
+}
+
+function onSearch() {
+    activeSearch = document.getElementById('searchInput').value;
+    renderEmailList();
+}
+
+async function refreshInbox(force = false) {
+    const cont = document.getElementById('mailList');
+    try {
+        if (!force) {
+            const cached = loadCache();
+            if (cached.length) {
+                allEmails = cached;
+                updateStats();
+                renderEmailList();
+                return;
+            }
+        }
+
+        cont.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+        const data = await fetchJSON('/api/activity?limit=5000');
+        allEmails = Array.isArray(data.items) ? data.items : [];
+        saveCache(allEmails);
+        updateStats();
+        renderEmailList();
+    } catch(e) {
+        cont.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i>Error: ${escHtml(e.message)}</div>`;
+    }
+}
+
+function updateStats() {
+    const phish = allEmails.filter(m => m.prediction === 'phishing').length;
+    const safe  = allEmails.filter(m => m.prediction !== 'phishing').length;
+    const avgConf = allEmails.length
+        ? Math.round(allEmails.reduce((s,m) => s + Number(m.confidence||0), 0) / allEmails.length * 100)
+        : 0;
+    document.getElementById('statTotal').textContent = allEmails.length;
+    document.getElementById('statPhish').textContent = phish;
+    document.getElementById('statSafe').textContent  = safe;
+    document.getElementById('statConf').textContent  = allEmails.length ? `${avgConf}%` : '—';
+}
+
+// ── View toggle ───────────────────────────────────────────────────────────────
+
+function switchView(view) {
+    currentView = view;
+    document.getElementById('viewInbox').classList.toggle('active', view==='inbox');
+    document.getElementById('viewLogs').classList.toggle('active', view==='logs');
+    document.getElementById('inboxView').style.display = view==='inbox' ? 'block' : 'none';
+    document.getElementById('logsView').style.display  = view==='logs'  ? 'block' : 'none';
+    if (view === 'logs') loadLogs();
+}
+
+async function loadLogs() {
+    const cont = document.getElementById('logsList');
+    cont.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+    try {
+        const data = await fetchJSON('/api/logs?limit=200');
+        const logs = data.logs || [];
+        if (!logs.length) {
+            cont.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i>No logs yet.</div>';
+            return;
+        }
+        cont.innerHTML = logs.map(log => {
+            const isPhish = log.prediction === 'phishing';
+            const rawPct  = (Number(log.raw_probability||0)*100).toFixed(1);
+            const adjPct  = (Number(log.adjusted_probability||0)*100).toFixed(1);
+            const dt = log.scanned_at ? new Date(log.scanned_at).toLocaleString() : '—';
+            let rules = [];
+            try { rules = JSON.parse(log.rule_adjustments||'[]'); } catch(e){}
+            return `<div class="log-item">
+                <div class="log-header">
+                    <span class="badge ${isPhish?'badge-phish':'badge-safe'}">${isPhish?'⚠ Phishing':'✓ Safe'}</span>
+                    <span style="font-size:0.67rem;color:var(--muted)">${dt}</span>
+                </div>
+                <div style="font-size:0.76rem;font-weight:600;margin-bottom:3px;">${escHtml(log.subject||'(No subject)')}</div>
+                <div class="log-sender">From: ${escHtml(log.sender||'')} → ${escHtml(log.recipient||'')}</div>
+                <div class="log-features">Raw ML: ${rawPct}% → Adjusted: ${adjPct}% (threshold 60%)</div>
+                ${rules.length ? `<div style="margin-top:4px">${rules.map(r=>`<span class="rule-tag" style="font-size:0.62rem">${escHtml(r)}</span>`).join('')}</div>` : ''}
+            </div>`;
+        }).join('');
+    } catch(e) {
+        cont.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i>${escHtml(e.message)}</div>`;
+    }
+}
+
+// ── Server status ─────────────────────────────────────────────────────────────
+
+async function updateServerStatus() {
+    const dot  = document.getElementById('serverDot');
+    const text = document.getElementById('serverText');
+    try {
+        const d = await fetchJSON('/api/local-server-status');
+        const up = !!d.local_server_up;
+        if (dot)  dot.classList.toggle('active', up);
+        if (text) text.textContent = up ? 'Local SMTP Up' : 'SMTP Offline';
+    } catch(e) {
+        if (dot)  dot.classList.remove('active');
+        if (text) text.textContent = 'SMTP Offline';
+    }
+}
+
+// ── Theme ────────────────────────────────────────────────────────────────────
+
+function applyTheme(t) {
+    document.body.classList.toggle('light-mode', t === 'light');
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+    localStorage.setItem('sjTheme', next);
+    applyTheme(next);
+});
+
+window.addEventListener('storage', (event) => {
+    if (event.key === 'sjTheme') {
+        applyTheme(event.newValue || 'dark');
+    }
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+applyTheme(localStorage.getItem('sjTheme') || 'dark');
+loadLocalUsers();
+refreshInbox();
+updateServerStatus();
+setInterval(updateServerStatus, 4000);
+
+// Load model name into pipeline
+fetchJSON('/api/model-info').then(info => {
+    const el = document.getElementById('pipeModelName');
+    if (el && info.model_name) el.textContent = info.model_name;
+}).catch(() => {});
+
+</script>
+<script>(function(){var b=document.getElementById('navAlertBadge');if(!b)return;function getRead(){try{return new Set(JSON.parse(localStorage.getItem('sjAlertsRead')||'[]'));}catch{return new Set();}}fetch('/api/alerts?limit=500').then(r=>r.json()).then(d=>{var items=Array.isArray(d)?d:(d.items||[]);var n=items.filter(a=>!getRead().has(String(a.id))).length;if(n>0){b.textContent=n>99?'99+':n;b.classList.add('visible');}}).catch(()=>{});})();</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 .env
 .venv/
+venv/
 datasets/
 __pycache__/
 dataset/CEAS_08.csv
